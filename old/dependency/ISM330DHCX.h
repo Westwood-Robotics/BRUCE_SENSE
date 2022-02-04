@@ -1,0 +1,51 @@
+#ifndef _ISM330DHCX_H
+#define _ISM330DHCX_H
+
+#define SENSORS_DPS_TO_RADS  (0.017453293F) // Degrees/s to rad/s multiplier
+#define GRAVITY_EARTH (9.80665F) /**< Earth's gravity in m/s^2 */
+#define SENSORS_GRAVITY_STANDARD (GRAVITY_EARTH)
+
+// I2C address
+#define ISM330DHCX_ADDR 0x6A
+// Device ID
+#define ISM330DHCX_ID 0x6B
+// Registers
+#define REG_DEVID 0x0F
+#define REG_X_L_G 0x22
+#define REG_CTRL1_XL 0x10
+#define REG_CTRL2_G 0x11
+
+/** The accelerometer data rate */
+typedef enum data_rate {
+  ISM330DHCX_RATE_SHUTDOWN,
+  ISM330DHCX_RATE_12_5_HZ,
+  ISM330DHCX_RATE_26_HZ,
+  ISM330DHCX_RATE_52_HZ,
+  ISM330DHCX_RATE_104_HZ,
+  ISM330DHCX_RATE_208_HZ,
+  ISM330DHCX_RATE_416_HZ,
+  ISM330DHCX_RATE_833_HZ,
+  ISM330DHCX_RATE_1_66K_HZ,
+  ISM330DHCX_RATE_3_33K_HZ,
+  ISM330DHCX_RATE_6_66K_HZ,
+} ism330dhcx_data_rate_t;
+
+/** The accelerometer data range */
+typedef enum accel_range {
+  ISM330DHCX_ACCEL_RANGE_2_G,
+  ISM330DHCX_ACCEL_RANGE_16_G,
+  ISM330DHCX_ACCEL_RANGE_4_G,
+  ISM330DHCX_ACCEL_RANGE_8_G
+} ism330dhcx_accel_range_t;
+
+/** The gyro data range */
+typedef enum gyro_range {
+  ISM330DHCX_GYRO_RANGE_125_DPS = 0b0010,
+  ISM330DHCX_GYRO_RANGE_250_DPS = 0b0000,
+  ISM330DHCX_GYRO_RANGE_500_DPS = 0b0100,
+  ISM330DHCX_GYRO_RANGE_1000_DPS = 0b1000,
+  ISM330DHCX_GYRO_RANGE_2000_DPS = 0b1100,
+  ISM330DHCX_GYRO_RANGE_4000_DPS = 0b0001
+} ism330dhcx_gyro_range_t;
+
+#endif

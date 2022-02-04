@@ -1,0 +1,7 @@
+Sensor reading:
+- I2C reading gyro and acc: 350us
+
+Serial Communication:
+- simple for loop one byte per loop: 1450 - 350 = 1100us
+- simple for loop 8 byte per loop: 750 - 350 = 400us
+
