@@ -172,7 +172,7 @@ class PKT(object):
                 # Whole return packet has arrived
                 break
             if time.time() - t_bus_init > TIMEOUT_MAX:
-                print("[PySense | WARNING] :: Status response timed out. Re-sending the same packet.")
+                print("[BRUCE_SENSE | WARNING] :: Status response timed out. Re-sending the same packet.")
                 print(self.ser.inWaiting())
                 self.ser.reset_output_buffer()
                 self.__write_packet(packet)
@@ -246,14 +246,57 @@ class PKT(object):
                     incoming_bytes.extend(self.ser.read(1))
                     break
             if time.time() - t_bus_init > TIMEOUT_MAX:
-                print("[PySense | WARNING] :: Status response timed out. Is dumper alright?")
+                print("[BRUCE_SENSE | WARNING] :: Status response timed out. Is dumper alright?")
                 t_bus_init = time.time()
         if got_packet:
             t_bus_init = time.time()
             pktlen = incoming_bytes[2]
             while self.ser.inWaiting() < pktlen:
                 if time.time() - t_bus_init > TIMEOUT_MAX:
-                    print("[PySense | WARNING] :: Status response timed out waiting for rest of packet")
+                    print("[BRUCE_SENSE | WARNING] :: Status response timed out waiting for rest of packet")
+            status_packet = self.ser.read(pktlen)
+        # Temporary absolute error watch:
+        if len(status_packet) < pktlen:
+            print("ser.read() returned too soon, status_packet length is only", len(status_packet))
+            error_code = 0b00000001
+        elif status_packet[-1] is not 0x0F:
+            print("Corrupted packet.")
+            error_code = 0b00000010
+        else:
+            error_code = status_packet[0]
+            contact = status_packet[-2]
+        status_packet = [self.ord_adapt(idx) for idx in status_packet[1:-2]]
+        return self.__hex_to_float32(status_packet), contact, error_code
+
+    def _read_dump_YOLO(self):
+        """
+        This command is to read data from dumper, but it only read once and return None if no data in buffer
+        :return:
+        """
+        # Timeout prevention if communication error starts occuring
+        incoming_bytes = [0, 0]
+        got_packet = False
+        t_bus_init = time.time()
+        self.ser.reset_input_buffer()
+        while True:
+            if self.ser.inWaiting() > 1:
+                # Check for start of packet
+                incoming_bytes.extend(self.ser.read(1))
+                incoming_bytes.pop(0)
+                if ((incoming_bytes[1]<<8)|incoming_bytes[0]) == 0xFFFF:
+                    # This is the beginning of the packet
+                    got_packet = True
+                    incoming_bytes.extend(self.ser.read(1))
+                    break
+            if time.time() - t_bus_init > TIMEOUT_MAX:
+                # Timeout with no data
+                return None
+        if got_packet:
+            t_bus_init = time.time()
+            pktlen = incoming_bytes[2]
+            while self.ser.inWaiting() < pktlen:
+                if time.time() - t_bus_init > TIMEOUT_MAX:
+                    print("[BRUCE_SENSE | WARNING] :: Status response timed out waiting for rest of packet")
             status_packet = self.ser.read(pktlen)
         # Temporary absolute error watch:
         if len(status_packet) < pktlen:

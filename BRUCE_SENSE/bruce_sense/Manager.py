@@ -162,5 +162,12 @@ class SENSOR(Packet.PKT):
         """
         return self._read_dump()
 
+    def get_dump_YOLO(self):
+        """
+        Get all IMU data from dumper but only try to read once
+        Return None if timeout
+        :return:
+        """
+        return self._read_dump_YOLO()
 
 
