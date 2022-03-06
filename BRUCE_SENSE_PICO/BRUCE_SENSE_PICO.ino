@@ -208,6 +208,11 @@ void readIMU(){
     float gyro_x_f;
     float gyro_y_f;
     float gyro_z_f;
+    float cp;
+    float sp;
+    float cr;
+    float sr;
+    float tp;
     float a_angle[] = {0,0,0}; // acceleration angle
     float gyro_angle[3] = {0,0,0}; // gyro angle intigrated from omega over time
 
@@ -237,22 +242,27 @@ void readIMU(){
     float grav_vec[3]; // Gravity vector
 
     // angle calculation 
-    if (a[2]>0){
-        // Roll
-        a_angle[0] = -atan2(abs(a[2]), a[1]) + PI/2;  
-        // Pitch
-        a_angle[1] = atan2(abs(a[2]), a[0]) - PI/2; 
+    a_angle[0] = atan2(a[1], a[2]);
+    a_angle[1] = -atan2(a[0], sqrt(a[1]*a[1] + a[2]*a[2]));
+    
+    cr = cos((*angle_x).floatingPoint);
+    sr = sin((*angle_x).floatingPoint);
+    cp = cos((*angle_y).floatingPoint);
+    sp = sin((*angle_y).floatingPoint);
+    if (abs(cp) < 0.0001){
+      cp = 0.0001;
     }
-    else{
-        // Roll
-        a_angle[0] = atan2(abs(a[2]), a[1]) - PI/2;  
-        // Pitch
-        a_angle[1] = -atan2(abs(a[2]), a[0]) + PI/2;
-    }
-    gyro_angle[0] = (*angle_x).floatingPoint + omega[0]*(*dt).floatingPoint*us2s;
-    gyro_angle[1] = (*angle_y).floatingPoint + omega[1]*(*dt).floatingPoint*us2s;
+    tp = sp / cp;   
+
+    gyro_angle[0] = (*angle_x).floatingPoint + (omega[0] + omega[1]*tp*sr + omega[2]*tp*cr)*(*dt).floatingPoint*us2s;
+    gyro_angle[1] = (*angle_y).floatingPoint + (omega[1]*cr - omega[2]*sr)*(*dt).floatingPoint*us2s;
+    gyro_angle[2] = (*angle_z).floatingPoint + (omega[1]*sr/cp + omega[2]*cr/cp)*(*dt).floatingPoint*us2s;
+    
+    // gyro_angle[0] = (*angle_x).floatingPoint + omega[0]*(*dt).floatingPoint*us2s;
+    // gyro_angle[1] = (*angle_y).floatingPoint + omega[1]*(*dt).floatingPoint*us2s;
     // Yaw
-    gyro_angle[2] = (*angle_z).floatingPoint + omega[2]*(*dt).floatingPoint*us2s;
+    // gyro_angle[2] = (*angle_z).floatingPoint + omega[2]*(*dt).floatingPoint*us2s;
+
 
     // Main CF
     //  for (int i = 0; i<2; i++){
