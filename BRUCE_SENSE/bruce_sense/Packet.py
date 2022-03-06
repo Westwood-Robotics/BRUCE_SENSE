@@ -277,7 +277,6 @@ class PKT(object):
         incoming_bytes = [0, 0]
         got_packet = False
         t_bus_init = time.time()
-        self.ser.reset_input_buffer()
         while True:
             if self.ser.inWaiting() > 1:
                 # Check for start of packet
@@ -298,6 +297,7 @@ class PKT(object):
                 if time.time() - t_bus_init > TIMEOUT_MAX:
                     print("[BRUCE_SENSE | WARNING] :: Status response timed out waiting for rest of packet")
             status_packet = self.ser.read(pktlen)
+            self.ser.reset_input_buffer()
         # Temporary absolute error watch:
         if len(status_packet) < pktlen:
             print("ser.read() returned too soon, status_packet length is only", len(status_packet))
