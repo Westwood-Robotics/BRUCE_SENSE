@@ -1,0 +1,1 @@
+acceleration会突然阶跃

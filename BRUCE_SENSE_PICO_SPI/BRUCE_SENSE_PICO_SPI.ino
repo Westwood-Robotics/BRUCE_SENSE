@@ -7,6 +7,14 @@ __date__ = "Nov. 04, 2021"
 __version__ = "0.0.2"
 __status__ = "Prototype" 
 */
+
+/* Debug Note
+ *  - Checked output using arduino serial plotter, confirmed that the noise still exists --- This is probably not a problem of serial communication
+ *  - Try different sensitivity settings for acceleration
+ *  - Tried SPI instead of I2C to debug communication between PICO and IMU, confirmed that the noise still exists --- This is not a problem of communication interface
+ */
+
+
 #define FW_Ver 0 // This firmware version
 #define HW_Ver 0 // current hardware version
 #define debug false // Set to True to output status to serial port
@@ -15,6 +23,7 @@ __status__ = "Prototype"
 #include "dependency/ISM330DHCX.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include "hardware/spi.h"
 
 /* Serial Communication
 Instructions
@@ -91,16 +100,24 @@ uint8_t contact = 0b10000000; // Contact status, MSB always 1 and the last 4 bit
 // Pinout
 static const uint LED_PIN = 25;
 
+// I2C
 static const uint SDA_PIN = 16;
 static const uint SCL_PIN = 17;
 
+// SPI
+static const uint cs_pin = 17;
+static const uint sck_pin = 18;
+static const uint mosi_pin = 19;
+static const uint miso_pin = 16;
+
+// Feet
 static const uint LTOE_PIN = 18;
 static const uint LHEEL_PIN = 19;
 static const uint RTOE_PIN = 20;
 static const uint RHEEL_PIN = 21;
 
 // Ports
-i2c_inst_t *i2c = i2c0;
+spi_inst_t *spi = spi0;
 
 // Other constants
 // static const float PI = 3.14159265359;
@@ -121,17 +138,16 @@ float accel_scale = 1; // range is in milli-g per bit!
  * Function Declarations
  */
 
-int reg_write(i2c_inst_t *i2c, 
-              const uint addr, 
-              const uint8_t reg, 
-              uint8_t *buf,
-              const uint8_t nbytes);
+void reg_write( spi_inst_t *spi, 
+                const uint cs, 
+                const uint8_t reg, 
+                const uint8_t data);
 
-int reg_read(i2c_inst_t *i2c,
-             const uint addr,
-             const uint8_t reg,
-             uint8_t *buf,
-             const uint8_t nbytes);
+int reg_read(  spi_inst_t *spi,
+                const uint cs,
+                const uint8_t reg,
+                uint8_t *buf,
+                uint8_t nbytes);
 
 void readIMU();
 
@@ -142,51 +158,48 @@ void dump();
 /*******************************************************************************
  * Function Definitions
  */
-
 // Write 1 byte to the specified register
-int reg_write(  i2c_inst_t *i2c, 
-                const uint addr, 
+void reg_write( spi_inst_t *spi, 
+                const uint cs, 
                 const uint8_t reg, 
+                const uint8_t data) {
+
+    uint8_t msg[2];
+                
+    // Construct message (set ~W bit low, MB bit low)
+    msg[0] = 0x00 | reg;
+    msg[1] = data;
+
+    // Write to register
+    gpio_put(cs, 0);
+    spi_write_blocking(spi, msg, 2);
+    gpio_put(cs, 1);
+}
+
+// Read byte(s) from specified register. If nbytes > 1, read from consecutive
+// registers.
+int reg_read(  spi_inst_t *spi,
+                const uint cs,
+                const uint8_t reg,
                 uint8_t *buf,
                 const uint8_t nbytes) {
 
     int num_bytes_read = 0;
-    uint8_t msg[nbytes + 1];
+    uint8_t mb = 0;
 
-    // Check to make sure caller is sending 1 or more bytes
+    // Determine if multiple byte (MB) bit should be set
     if (nbytes < 1) {
-        return 0;
+        return -1;
     }
 
-    // Append register address to front of data packet
-    msg[0] = reg;
-    for (int i = 0; i < nbytes; i++) {
-        msg[i + 1] = buf[i];
-    }
+    // Construct message (set ~W bit high)
+    uint8_t msg = 0x80 | reg;
 
-    // Write data to register(s) over I2C
-    i2c_write_blocking(i2c, addr, msg, (nbytes + 1), false);
-
-    return num_bytes_read;
-}
-
-// Read byte(s) from specified register. If nbytes > 1, read from consecutive registers.
-int reg_read( i2c_inst_t *i2c,
-              const uint addr,
-              const uint8_t reg,
-              uint8_t *buf,
-              const uint8_t nbytes) {
-
-    int num_bytes_read = 0;
-
-    // Check to make sure caller is asking for 1 or more bytes
-    if (nbytes < 1) {
-        return 0;
-    }
-
-    // Read data from register(s) over I2C
-    i2c_write_blocking(i2c, addr, &reg, 1, true);
-    num_bytes_read = i2c_read_blocking(i2c, addr, buf, nbytes, false);
+    // Read from register
+    gpio_put(cs, 0);
+    spi_write_blocking(spi, &msg, 1);
+    num_bytes_read = spi_read_blocking(spi, 0, buf, nbytes);
+    gpio_put(cs, 1);
 
     return num_bytes_read;
 }
@@ -217,7 +230,8 @@ void readIMU(){
     float gyro_angle[3] = {0,0,0}; // gyro angle intigrated from omega over time
 
     // Read X, Y, and Z acc and gyro values from registers (16 bits each, 12 bytes in total)
-    reg_read(i2c, ISM330DHCX_ADDR, REG_X_L_G, data, 12);
+    reg_read(spi, cs_pin, REG_X_L_G, data, 12);
+    
     // Convert 2 bytes (little-endian) into 16-bit integer (signed)
     gyro_x = (int16_t)((data[1] << 8) | data[0]);
     gyro_y = (int16_t)((data[3] << 8) | data[2]);
@@ -373,12 +387,25 @@ void setup() {
     // Initialize chosen serial port
     Serial.begin(115200);
 
-    //Initialize I2C port at 1000 kHz
-    i2c_init(i2c, 1000 * 1000);
+    // Initialize CS pin high
+    gpio_init(cs_pin);
+    gpio_set_dir(cs_pin, GPIO_OUT);
+    gpio_put(cs_pin, 1);
 
-    // Initialize I2C pins
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
+    // Initialize SPI port at 1 MHz
+    spi_init(spi, 1000 * 1000);
+    
+    // Set SPI format
+    spi_set_format( spi0,   // SPI instance
+                    8,      // Number of bits per transfer
+                    SPI_CPOL_0,   // Polarity (CPOL)
+                    SPI_CPHA_0,   // Phase (CPHA)
+                    SPI_MSB_FIRST);
+
+    // Initialize SPI pins
+    gpio_set_function(sck_pin, GPIO_FUNC_SPI);
+    gpio_set_function(mosi_pin, GPIO_FUNC_SPI);
+    gpio_set_function(miso_pin, GPIO_FUNC_SPI);
 
     // CFG data initiation
     (*dt).floatingPoint = dt_default;
@@ -397,7 +424,7 @@ void setup() {
     sleep_ms(500);
 
     // Read device ID to make sure that we can communicate with the ISM330DHCX
-    reg_read(i2c, ISM330DHCX_ADDR, REG_DEVID, data, 1);
+    reg_read(spi, cs_pin, REG_DEVID, data, 1);
     if (data[0] != ISM330DHCX_ID) {
         printf("ERROR: Could not communicate with ISM330DHCX\r\n");
         // turn off LED and wait for 0.5s
@@ -417,10 +444,10 @@ void setup() {
 
         // Set Accelerometer Control register for 3.33 kHz, 4g, data from LPF1 (0b1001 10 0 0)
         uint8_t CTRL1_XL = 0b10011000;
-        reg_write(i2c, ISM330DHCX_ADDR, REG_CTRL1_XL, &CTRL1_XL, 1);
+        reg_write(spi, cs_pin, REG_CTRL1_XL, CTRL1_XL);
         // Set Gyro Control register for 3.33 kHz, 500DPS (0b1001 01 0 0)
         uint8_t CTRL2_G = 0b10010100;
-        reg_write(i2c, ISM330DHCX_ADDR, REG_CTRL2_G, &CTRL2_G, 1);
+        reg_write(spi, cs_pin, REG_CTRL2_G, CTRL2_G);
         printf("CTRL1_XL Set to 0x%02x; CTRL2_G Set to %02x.\r\n", CTRL1_XL, CTRL2_G);
         sleep_ms(200);        
 
@@ -491,7 +518,10 @@ void loop() {
     {
         readIMU();
         readContact();
-        dump();
+        // dump();
+        Serial.print(STAT[1].floatingPoint);
+        Serial.print(",");
+        Serial.println(STAT[2].floatingPoint);
         loop_time = (micros()-t_final);
         // printf("Loop Time: %10.2f\r\n", loop);
         if (loop_time > (*dt).floatingPoint){
