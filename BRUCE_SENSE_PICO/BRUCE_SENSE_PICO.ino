@@ -7,6 +7,19 @@ __date__ = "Nov. 04, 2021"
 __version__ = "0.0.2"
 __status__ = "Prototype" 
 */
+
+/* Debug Note
+ *  - Checked output using arduino serial plotter, confirmed that the noise still exists --- This is probably not a problem of serial communication
+ *  - Tried different sensitivity settings for acceleration, confirmed that the noise still exists --- This is not a problem of sensitivity settings, but note that the higher the sensitivity, the higher the impulse magnitude
+ *  - Tried SPI instead of I2C to debug communication between PICO and IMU, confirmed that the noise still exists --- This is not a problem of communication interface- Tried different sensitivity settings for acceleration, confirmed that the noise still exists --- This is not a problem of sensitivity settings, but note that the higher the sensitivity, the higher the impulse magnitude
+ *  - Try different ODR, confirmed that the noise still exists --- This is not a problem of ODR
+ *  - Try LPF2, confirmed that the noise still exists --- This is not a problem of LPF, but left LPF2 enabled.
+ *  
+ *  Conclusion: it's a bug of the chip. Looking for workarounds...
+ *  - Tried moving average, condition significantly improved with a queue of length-10
+ */
+
+ 
 #define FW_Ver 0 // This firmware version
 #define HW_Ver 0 // current hardware version
 #define debug false // Set to True to output status to serial port
@@ -15,6 +28,11 @@ __status__ = "Prototype"
 #include "dependency/ISM330DHCX.h"
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#define REG_CTRL8_XL  0x17
+#define Q_LEN 10 // Moving average queue length
+float Q_X[Q_LEN+1] = {0}; // Global queue space for a_x, last element stores queue average
+float Q_Y[Q_LEN+1] = {0}; // Global queue space for a_y, last element stores queue average
+float Q_Z[Q_LEN+1] = {0}; // Global queue space for a_z, last element stores queue average
 
 /* Serial Communication
 Instructions
@@ -63,7 +81,6 @@ typedef union {
 
 float32 STAT[13]; // STAT date space
 float32 CFG[10]; // CFG date space
-
 
 // Pointers for easier programming
 // ==STAT=========================
@@ -139,6 +156,9 @@ void readContact();
 
 void dump();
 
+float moving_average(float *q, 
+                     float new_data);
+
 /*******************************************************************************
  * Function Definitions
  */
@@ -191,6 +211,18 @@ int reg_read( i2c_inst_t *i2c,
     return num_bytes_read;
 }
 
+// Calculate moving average
+float moving_average(float *q, 
+                     float new_data){
+  q[Q_LEN]-=q[0]/Q_LEN; // Remove the portion of the first value in the queue from average
+  for(int i=0; i<(Q_LEN-1); i++){
+    q[i]=q[i+1];    
+  } // Shift queue forward 
+  q[Q_LEN-1] = new_data; // Add new data into queue
+  q[Q_LEN]+= q[Q_LEN-1]/Q_LEN; // Add the portion of the last value in the queue into average
+  return q[Q_LEN];
+}
+
 // Read and filter data from IMU, then populate STAT date space
 void readIMU(){
     // Buffer to store raw reads
@@ -240,6 +272,11 @@ void readIMU(){
                      gyro_y_f + (*gyro_bias_y).floatingPoint,
                      gyro_z_f + (*gyro_bias_z).floatingPoint};  
     float grav_vec[3]; // Gravity vector
+
+    // Filter acceleration data with moving average
+    a[0] = moving_average(Q_X, a[0]);
+    a[1] = moving_average(Q_Y, a[1]);
+    a[2] = moving_average(Q_Z, a[2]);
 
     // angle calculation 
     a_angle[0] = atan2(a[1], a[2]);
@@ -415,9 +452,13 @@ void setup() {
         }
         printf("Found ISM330DHCX!\r\n");
 
-        // Set Accelerometer Control register for 3.33 kHz, 4g, data from LPF1 (0b1001 10 0 0)
-        uint8_t CTRL1_XL = 0b10011000;
+        // Set Accelerometer Control register for 3.33 kHz, 2g, data from LPF1 (0b1001 10 0 0)
+        uint8_t CTRL1_XL = 0b10101000;
         reg_write(i2c, ISM330DHCX_ADDR, REG_CTRL1_XL, &CTRL1_XL, 1);
+        // Set Accelerometer Control register for LPF2, no HP filter, HPCF_XL = 000 (0b000 0 0 0 0 0)        
+        uint8_t CTRL8_XL = 0b00000000;        
+        reg_write(i2c, ISM330DHCX_ADDR, REG_CTRL8_XL, &CTRL8_XL, 1);
+        
         // Set Gyro Control register for 3.33 kHz, 500DPS (0b1001 01 0 0)
         uint8_t CTRL2_G = 0b10010100;
         reg_write(i2c, ISM330DHCX_ADDR, REG_CTRL2_G, &CTRL2_G, 1);
