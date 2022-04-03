@@ -4,7 +4,7 @@ __email__ = "xzhang@westwoodrobotics.io"
 __copyright__ = "Copyright 2021 Westwood Robotics"
 __date__ = "Nov. 04, 2021"
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 __status__ = "Prototype" 
 */
 
