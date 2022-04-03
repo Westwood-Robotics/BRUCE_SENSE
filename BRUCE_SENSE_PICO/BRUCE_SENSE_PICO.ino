@@ -13,7 +13,7 @@ __status__ = "Prototype"
  *  - Tried different sensitivity settings for acceleration, confirmed that the noise still exists --- This is not a problem of sensitivity settings, but note that the higher the sensitivity, the higher the impulse magnitude
  *  - Tried SPI instead of I2C to debug communication between PICO and IMU, confirmed that the noise still exists --- This is not a problem of communication interface- Tried different sensitivity settings for acceleration, confirmed that the noise still exists --- This is not a problem of sensitivity settings, but note that the higher the sensitivity, the higher the impulse magnitude
  *  - Try different ODR, confirmed that the noise still exists --- This is not a problem of ODR
- *  - Try LPF2, confirmed that the noise still exists --- This is not a problem of LPF, but left LPF2 enabled.
+ *  - Try LPF2, confirmed that the noise still exists --- This is not a problem of LPF.
  *  
  *  Conclusion: it's a bug of the chip. Looking for workarounds...
  *  - Tried moving average, condition significantly improved with a queue of length-10
