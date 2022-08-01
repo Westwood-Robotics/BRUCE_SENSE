@@ -3,7 +3,7 @@ import matplotlib.animation as animation
 import time
 
 from bruce_sense import Manager
-s = Manager.SENSOR(port='COM7', baudrate=2000000)
+s = Manager.SENSOR(port='COM12', baudrate=2000000)
 
 fig = plt.figure()
 ax1 = fig.add_subplot(221)
@@ -51,9 +51,9 @@ def animate(i, ts, rs, ps, ys, rxs, rys, rzs, ddxs, ddys, ddzs, ddxs_nog, ddys_n
     ax2.clear()
     ax3.clear()
     ax4.clear()
-    ax1.plot(ts[-100:], rs[-100:], label='roll (x)')
-    ax1.plot(ts[-100:], ps[-100:], label='pitch (y)')
-    #ax1.plot(ts[-100:], ys[-100:], label='yaw (z)')
+    # ax1.plot(ts[-100:], rs[-100:], label='roll (x)')
+    # ax1.plot(ts[-100:], ps[-100:], label='pitch (y)')
+    ax1.plot(ts[-100:], ys[-100:], label='yaw (z)')
     ax1.legend(loc='upper left')
     ax2.plot(ts[-100:], rxs[-100:], label='du (x)')
     ax2.plot(ts[-100:], rys[-100:], label='dv (y)')

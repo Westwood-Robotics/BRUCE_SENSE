@@ -2,7 +2,7 @@ import time
 import os
 
 from bruce_sense import Manager
-s = Manager.SENSOR(port='COM9', baudrate=115200)
+s = Manager.SENSOR(port='COM12', baudrate=115200)
 # data = s.get_dump()[0]
 # print(data)
 # start_time = time.time()
