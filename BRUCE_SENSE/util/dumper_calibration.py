@@ -15,6 +15,16 @@ __status__ = "Prototype"
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 import time
+from os import system, name
+
+# define our clear function
+
+def screen_clear():
+    if name == 'nt':
+        _ = system('cls')
+    # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
 
 from bruce_sense import Manager
 s = Manager.SENSOR(port='COM12', baudrate=2000000)
@@ -33,7 +43,9 @@ data = {}
 sample_rate = 2000
 
 for i in range(sample_rate):
+    t0 = time.time()
     data = s.get_dump()[0]
+    # print(time.time()-t0)
     # Raw acceleration:
     ddxs.append(data[0])
     ddys.append(data[1])
@@ -42,17 +54,18 @@ for i in range(sample_rate):
     rxs.append(data[3])
     rys.append(data[4])
     rzs.append(data[5])
-    time.sleep(0.01)
-    print(i/2000)
+    # time.sleep(0.001)
+    screen_clear()
+    print(100*i/sample_rate)
 
-ddx_bias = sum(ddxs)/sample_rate
-ddy_bias = sum(ddys)/sample_rate
-ddz_bias = sum(ddzs)/sample_rate
+ddx_bias = - sum(ddxs)/sample_rate
+ddy_bias = - sum(ddys)/sample_rate
+ddz_bias = - sum(ddzs)/sample_rate
 
 
-rx_bias = sum(rxs)/sample_rate
-ry_bias = sum(rys)/sample_rate
-rz_bias = sum(rzs)/sample_rate
+rx_bias = - sum(rxs)/sample_rate
+ry_bias = - sum(rys)/sample_rate
+rz_bias = - sum(rzs)/sample_rate
 
 print("Calibration result:")
 print("Acceleration bias: x: %f, y: %f, z: %f" % (ddx_bias, ddy_bias, ddz_bias))

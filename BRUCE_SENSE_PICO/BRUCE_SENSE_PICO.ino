@@ -424,9 +424,9 @@ void setup() {
     (*a_bias_x).floatingPoint = 0.031045;//0.05616613;//0.26404677;
     (*a_bias_y).floatingPoint = 0.065;//0.19473464;//-0.12604313;
     (*a_bias_z).floatingPoint = -0.07;//-0.04458105;//0.0390042;
-    (*gyro_bias_x).floatingPoint = 0.009320;//-0.00721309;//-0.00658039;
-    (*gyro_bias_y).floatingPoint = -0.016808;//0.01036009;//0.0093528;
-    (*gyro_bias_z).floatingPoint = 0.0033;//0.00560769;//0.00566089;
+    (*gyro_bias_x).floatingPoint = -0.003844;//-0.00721309;//-0.00658039;
+    (*gyro_bias_y).floatingPoint = 0.009611;//0.01036009;//0.0093528;
+    (*gyro_bias_z).floatingPoint = 0.009838;//0.00560769;//0.00566089;
     
     (*criterion_1).floatingPoint = 2;
     (*criterion_2).floatingPoint = 0.005;
