@@ -3,7 +3,7 @@ import matplotlib.animation as animation
 import time
 
 from bruce_sense import Manager
-s = Manager.SENSOR(port='COM7', baudrate=2000000)
+s = Manager.SENSOR(port='COM12', baudrate=2000000)
 
 fig = plt.figure()
 ax1 = fig.add_subplot(221)
@@ -27,7 +27,7 @@ t0 = time.time()
 data = {}
 
 def animate(i, ts, rs, ps, ys, rxs, rys, rzs, ddxs, ddys, ddzs, ddxs_nog, ddys_nog, ddzs_nog):
-    data = s.get_dump()[0]
+    data, contact, error = s.get_dump()
 
     ts.append(time.time() - t0)
 
@@ -37,7 +37,7 @@ def animate(i, ts, rs, ps, ys, rxs, rys, rzs, ddxs, ddys, ddzs, ddxs_nog, ddys_n
 
     ddxs.append(data[0])
     ddys.append(data[1])
-    ddzs.append(data[2])
+    ddzs.append(data[2]-9.7)
 
     rxs.append(data[3])
     rys.append(data[4])
@@ -46,17 +46,18 @@ def animate(i, ts, rs, ps, ys, rxs, rys, rzs, ddxs, ddys, ddzs, ddxs_nog, ddys_n
     rs.append(data[9])
     ps.append(data[10])
     ys.append(data[11])
+    print(contact)
 
     ax1.clear()
     ax2.clear()
     ax3.clear()
     ax4.clear()
-    ax1.plot(ts[-100:], rs[-100:], label='roll (x)')
-    ax1.plot(ts[-100:], ps[-100:], label='pitch (y)')
-    #ax1.plot(ts[-100:], ys[-100:], label='yaw (z)')
+    # ax1.plot(ts[-100:], rs[-100:], label='roll (x)')
+    # ax1.plot(ts[-100:], ps[-100:], label='pitch (y)')
+    ax1.plot(ts[-100:], ys[-100:], label='yaw (z)')
     ax1.legend(loc='upper left')
-    ax2.plot(ts[-100:], rxs[-100:], label='du (x)')
-    ax2.plot(ts[-100:], rys[-100:], label='dv (y)')
+    #ax2.plot(ts[-100:], rxs[-100:], label='du (x)')
+    #ax2.plot(ts[-100:], rys[-100:], label='dv (y)')
     ax2.plot(ts[-100:], rzs[-100:], label='dw (z)')
     ax2.legend(loc='upper left')
     ax3.plot(ts[-100:], ddxs[-100:], label='ddx')
