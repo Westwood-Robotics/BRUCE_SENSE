@@ -1,2 +1,0 @@
-1. ARDUINO IDE setup
-2. Upload the program

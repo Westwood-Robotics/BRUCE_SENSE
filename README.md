@@ -1,16 +1,24 @@
 # BRUCE_SENSE
 
-Sensory for BRUCE. This repo contains both the code running on the Pi Pico(BRUCE_SENSE_PICO) which collects the IMU data and the foot contact sensor data (as well as liquid cooling control in the future), and the code running on the on-board computer(BRUCE_SENSE) which controls the motion of BRUCE.
+Sensory for BRUCE. This branch contains ONLY the code running on the Pi Pico(BRUCE_SENSE_PICO) which collects the IMU data and the foot contact sensor data, as well as controls the liquid cooling system.
 
-### BRUCE_SENSE
+### Dependencies
 
-To use BRUCE_SENSE, please first run setup.py to install the module. 
+We use the Butterworth filter from the Arduino Filters(https://github.com/tttapa/Arduino-Filters) library. 
 
-To read data, first import `Manager` then create an instance of `Manger.SENSOR`.
+In your Arduino IDE, go to: Sketch -> Include Library -> Add .ZIP Library..., and select the Arduino-Filters.zip file in the Dependency folder.
+ 
+### What's New
+1. Increase sampling rate of sensors to 2kHz.
+2. Enable two-stage Low-Pass filters on IMU.
+3. Add a 2nd order Butterworth filter.
+4. Move some important timing constants to the beginning of the code.
 
-The library is still under construction and for simplicity, please only use `SENSOR.get_dump()` function for now.
+### Key Usage Points
+1. Cut-off frequency of Butterworth filter should be above 10Hz and below 100Hz.
+2. Preferred minimum data send frequency is 1kHz.
+3. Raw data is after the two-stage Low-Pass filters on IMU.
+4. Calibration is still using raw data.
+5. If raw data preferred, comment line 812 send_filtered_data(); and uncomment line 811 send_data();
 
-### BRUCE_SENSE_PICO
-
-Refer to _README_ in BRUCE_SENSE_PICO for more details on how to set up the pi pico for BRUCE.
 
