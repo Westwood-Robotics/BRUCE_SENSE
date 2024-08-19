@@ -1,5 +1,7 @@
 # BRUCE_SENSE
 
+**Most recent versions of BRUCE_SENSE has been included in BRUCE-OP repo(https://github.com/Westwood-Robotics/BRUCE-OP). This repo is not being updated.**
+
 Sensory for BRUCE. This repo contains both the code running on the Pi Pico(BRUCE_SENSE_PICO) which collects the IMU data and the foot contact sensor data (as well as liquid cooling control in the future), and the code running on the on-board computer(BRUCE_SENSE) which controls the motion of BRUCE.
 
 ### BRUCE_SENSE
